@@ -27,10 +27,10 @@ func (this *Upload) UploadImage() {
 	now := time.Now()
 	expiredDate := now.Add(7 * 24 * time.Hour)
 
-	// if user == nil {
-	// 	this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized)
-	// 	return
-	// }
+	if user == nil {
+		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized)
+		return
+	}
 
 	tempFilePath := v1.ImagePath + "/TempFile"
 	result := map[string]interface{}{}

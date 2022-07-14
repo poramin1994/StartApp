@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"strings"
 	"time"
@@ -170,4 +171,19 @@ func GetUserByToken(token string) *User {
 	}
 	u, _ := GetUserById(ut.User.Id)
 	return u
+}
+func GenerateToken(length int) (token string) {
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+gen:
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	token = string(b)
+	exist := GetUserByToken(token)
+	if exist != nil {
+		goto gen
+
+	}
+	return
 }

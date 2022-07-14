@@ -1,13 +1,13 @@
 package controllers
 
 import (
-	// "StartApp/models"
+	"StartApp/models"
 	"fmt"
-	// "time"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
-	// "golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 //API for Client
@@ -33,7 +33,7 @@ var (
 
 func Init() {
 	logs.Debug("init db")
-
+	initAdminUser()
 }
 
 func (api *API) BaseURL() string {
@@ -80,3 +80,37 @@ func (c *API) Get() {
 	c.TplName = "index.tpl"
 }
 
+func initAdminUser() {
+	usernameList := []string{"wisdomvastTester1@gmail.com", "wisdomvastTester2@gmail.com", "wisdomvastTester3@gmail.com", "wisdomvastDev@wisdomvast.com", "wisdomvastDev2@wisdomvast.com"}
+	now := time.Now()
+	encPass, _ := bcrypt.GenerateFromPassword([]byte(defAdminPassword), bcrypt.DefaultCost)
+	pass := string(encPass)
+
+	for _, username := range usernameList {
+		exist, _ := models.GetUserByUsername(username)
+		if exist == nil {
+			_, err := models.AddUser(&models.User{
+				Username: username,
+				Password: pass,
+				Activate: true,
+				Delete:   false,
+				Created:  now,
+				Updated:  now,
+			})
+			if err != nil {
+				logs.Error("err init user :", username, "err", err)
+			}
+			//Generate user_token
+			user, _ := models.GetUserByUsername(username)
+			_, err = models.AddUserToken(&models.UserToken{
+				Token:   models.GenerateToken(32),
+				User:    user,
+				Created: now,
+				Updated: now,
+			})
+			if err != nil {
+				logs.Error("err init user token :", username, "err", err)
+			}
+		}
+	}
+}

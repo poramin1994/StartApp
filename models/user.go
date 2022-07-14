@@ -159,3 +159,12 @@ func GetUserByEmailAndDelete(email string, del bool) (v *User, err error) {
 	}
 	return nil, err
 }
+
+func GetUserByUsername(username string) (v *User, err error) {
+	o := orm.NewOrm()
+	v = &User{}
+	if err = o.QueryTable(new(User)).Filter("Username", username).RelatedSel().One(v); err == nil {
+		return v, nil
+	}
+	return nil, err
+}

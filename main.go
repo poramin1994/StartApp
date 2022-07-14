@@ -4,6 +4,8 @@ import (
 	_ "StartApp/routers"
 	// "StartApp/jobs"
 
+	internal "StartApp/controllers"
+
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
@@ -133,7 +135,7 @@ func main() {
 	})
 
 	beego.InsertFilter("*", beego.BeforeRouter, filterFunc)
-	// internal.Init()
+	internal.Init()
 	enableTask, err := beego.AppConfig.Bool("EnableTask")
 	if err != nil {
 		enableTask = false

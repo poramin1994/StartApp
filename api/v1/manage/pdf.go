@@ -2,6 +2,7 @@ package manager
 
 import (
 	v1 "StartApp/api"
+	"StartApp/models"
 	"bytes"
 	"html/template"
 	"net/http"
@@ -19,6 +20,9 @@ type Pdf struct {
 }
 
 func (this *Pdf) GeneratePDFSpareList() {
+	now := time.Now()
+	expiredDate := now.Add(7 * 24 * time.Hour)
+
 	result := map[string]interface{}{}
 	user := this.GetUser()
 	spareLists := make([]map[string]interface{}, 0)
@@ -80,18 +84,30 @@ func (this *Pdf) GeneratePDFSpareList() {
 		return
 	}
 
-	now := time.Now().Format("02-01-2006")
-	fileName := v1.ImagePath + "/TempFile/" + "approval" + now
+	timeString := now.Format("02-01-2006")
+	fileName := v1.ImagePath + "/TempFile/" + "approval" + timeString
 	err = os.WriteFile(fileName+".pdf", pdfg.Bytes(), os.ModePerm)
 	if err != nil {
 		this.ResponseJSON(err.Error(), 500, "error")
 		return
 	}
 
+	tmpfile := &models.TmpFileList{
+		User:        user,
+		Path:        "/TempFile/approval" + timeString,
+		ExpiredDate: expiredDate,
+		Extension:   "",
+		Created:     now,
+		Updated:     now,
+	}
+	if _, err = models.AddTmpFileList(tmpfile); err != nil {
+		logs.Error("Error UploadImage : add AddTmpFileList")
+	}
+
 	// export PDF
 
 	transcodeDstPath := v1.ImagePath + "/TempFile"
-	filename := "approval" + now
+	filename := "approval" + timeString
 	output := transcodeDstPath + "/" + filename + ".pdf"
 	downloadName := filename + ".pdf"
 	logs.Debug("output :", output)

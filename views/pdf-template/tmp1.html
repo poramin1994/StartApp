@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice</title>
+    <style>
+        .top-panel {
+            text-align: right;
+        }
+
+        .address {
+            line-height: 1.5em;
+        }
+
+        .address span {
+
+        }
+
+        .data-table {
+            width: 100%;
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 10px;
+
+        }
+
+        .data-table td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .data-table th {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 10px;
+        }
+
+        /*@font-face {*/
+        /*    font-family: "TH Sarabun New";*/
+        /*    src: url("/mnt/thai-lpga/data/template/font/Sarabun-Regular.ttf") format("ttf");*/
+        /*    !*src: url( {{.Font}}) format("ttf");*!*/
+        /*}*/
+
+        .left {
+            text-align: left;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .content {
+            padding: 0 30px;
+            text-align: center;
+            /*font-family: "TH Sarabun New", Arial, serif;*/
+            font-family:  "TH Sarabun New","Roboto Light" ,serif;
+            font-size: 20px;
+            line-height: 1.2;
+        }
+
+        .header {
+            font-size: 23px;
+            line-height: 1.2;
+        }
+        .footer {
+            margin-top: 950px;
+        }
+        #box {
+            background-size: contain;
+            margin:10px 10px 10px 860px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div style="margin-bottom: 70px" id="box">
+</div>
+<div class="content">
+    <div align="right" style="margin-top: 0px;margin-bottom: 0px;font-size: 18px;">
+        <!-- ผุ้แจ้ง : {{.Informer}} -->
+        <!-- วันที่แจ้ง : {{.InformDate}} -->
+    </div>
+    <div class="header">
+        ใบขออนุญาตแจ้งซ่อม
+    </div>
+    <br>
+    <table align="left" style="height: 150px;">
+        <tbody>
+        <tr class="left">
+            <td colspan="3" style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                เลขที่ใบงาน : {{.Car.TaskNumber}} <br>
+            </td>
+            <td style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                <!-- หน่วยงาน : --><br>
+            </td>
+        </tr>
+        <tr class="left">
+            <td style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                ยี่ห้อ :  {{.Car.Brand}} <br>
+                ทะเบียนรถ :  {{.Car.CarRegistration}} <br>
+            </td>
+            <td style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                รุ่น : {{.Car.Model}} <br>
+            </td>
+            <td style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                รุ่นปีค.ศ : {{.Car.RegistrationDate}} <br>
+            </td>
+            <td style="width: 400px;vertical-align:top;overflow-wrap:break-word;font-size: 18px;" class="left">
+                เลขตัวถัง : {{ .Car.ChassisNumber}} <br>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <br>
+
+    <table class="data-table" style="margin-top: 100px">
+        <tr>
+            <th style="width:120px;">ลำดับ</th>
+            <th style="width:120px;">รายการ</th>
+            <th style="width:120px;">ยี่ห้อรุ่น</th>
+            <th style="width:120px;">จำนวน</th>
+            <th style="width:120px;">หน่วยนับ</th>
+            <th>สถานะ</th>
+            <th>หมายเหตุ</th>
+        </tr>  
+        {{ range $key, $value := .spareLists }}  
+            <tr>
+                <td class="cell-no-border left">
+                    {{ $value.row }}<br>
+                </td>
+
+                <td class="cell-no-border left">
+                    {{ $value.name }}<br>
+                </td>
+
+                <td class="cell-no-border left">
+                    {{ $value.brand }}<br>
+                </td>
+
+                <td class="cell-no-border left">
+                    {{ $value.amount }}<br>
+                </td>
+
+                <td class="cell-no-border left">
+                    {{ $value.unit }}<br>
+                </td>
+
+                <td class="cell-no-border left">
+                   {{ $value.status }}<br>
+
+                </td>
+                <td class="cell-no-border left">
+                    {{ $value.remark }}<br>
+                </td>
+            </tr>
+        {{end}}
+        </tr>
+    </table>
+
+    <div class="footer"></div>
+
+</div>
+</body>
+</html>

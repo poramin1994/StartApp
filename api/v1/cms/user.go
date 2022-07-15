@@ -21,7 +21,7 @@ func (this *User) Login() {
 	email := this.GetString("email", "")
 	password := this.GetString("password", "")
 
-	user, err := models.GetUserByEmailAndDelete(email, false)
+	user, err := models.GetUserByUsernameAndDelete(email, false)
 	if err != nil || user == nil {
 		// 404
 		this.ResponseJSONWithCode(result, 404, 40400, "บัญชีอีเมลหรือรหัสผ่านไม่ถูกต้อง")
@@ -41,6 +41,16 @@ func (this *User) Login() {
 	if err != nil {
 		this.ResponseJSONWithCode(nil, 404, 40401, "ไม่พบรหัสผ่านหรือบัญชีไม่ถูกต้อง")
 		return
+	}
+	//GanNewToken
+	token, err := GanNewToken(user)
+	if err != nil {
+		this.ResponseJSONWithCode(nil, 500, 50000, "ไม่สามารถสร้างตัวแปรรับค่าได้")
+		return
+	}
+	result = map[string]interface{}{
+		"token": token,
+		"user":  user.Username,
 	}
 
 	this.ResponseJSON(result, 200, v1.Success)
@@ -111,26 +121,35 @@ func (this *User) ChangePassword() {
 		this.ResponseJSONWithCode(nil, 500, 50002, v1.SomethingWentWrong)
 		return
 	}
-
+	// GanNewToken
+	token, err := GanNewToken(user)
+	if err != nil {
+		logs.Error("update reset password: err gen token:", err)
+		this.ResponseJSONWithCode(nil, 500, 50003, v1.SomethingWentWrong)
+		return
+	}
+	result = map[string]interface{}{
+		"token": token,
+	}
 	this.ResponseJSONWithCode(result, 200, 200, v1.Success)
 	return
 }
 
-func GanNewToken(user *models.User, err error) (string, error) {
+func GanNewToken(user *models.User) (token string, err error) {
 	removeOldToken(user)
 
 gen:
-	t := randString(64)
-	exist, _ := models.GetUserTokenByToken(t)
+	token = randString(64)
+	exist, _ := models.GetUserTokenByToken(token)
 	if exist != nil {
 		goto gen
 	}
 	tokenData := &models.UserToken{
 		User:  user,
-		Token: t,
+		Token: token,
 	}
 	_, err = models.AddUserToken(tokenData)
-	return t, err
+	return token, err
 }
 
 func removeOldToken(u *models.User) {

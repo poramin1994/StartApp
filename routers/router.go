@@ -42,6 +42,7 @@ func init() {
 		beego.NSNamespace("/upload",
 			beego.NSRouter("/image", &v1manage.Upload{}, "post:UploadImage"),
 		),
+		beego.NSRouter("/pdf/spareList", &v1manage.Pdf{}, "get:GeneratePDFSpareList"),
 	)
 
 	beego.AddNamespace(appv1)

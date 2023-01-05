@@ -24,28 +24,28 @@ func (this *User) Login() {
 	user, err := models.GetUserByUsernameAndDelete(email, false)
 	if err != nil || user == nil {
 		// 404
-		this.ResponseJSONWithCode(result, 404, 40400, "บัญชีอีเมลหรือรหัสผ่านไม่ถูกต้อง")
+		this.ResponseJSONWithCode(result, 404, 40400, "บัญชีอีเมลหรือรหัสผ่านไม่ถูกต้อง", false)
 		return
 	}
 
 	if !user.Activate {
-		this.ResponseJSONWithCode(result, 403, 40301, "ผู้ใช้ไม่ได้รับอนุญาตให้ใช้งาน")
+		this.ResponseJSONWithCode(result, 403, 40301, "ผู้ใช้ไม่ได้รับอนุญาตให้ใช้งาน", false)
 		return
 	}
 	if user.Delete {
-		this.ResponseJSONWithCode(result, 403, 40302, "ผู้ใช้ไม่ได้รับอนุญาตให้ใช้งาน")
+		this.ResponseJSONWithCode(result, 403, 40302, "ผู้ใช้ไม่ได้รับอนุญาตให้ใช้งาน", false)
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		this.ResponseJSONWithCode(nil, 404, 40401, "ไม่พบรหัสผ่านหรือบัญชีไม่ถูกต้อง")
+		this.ResponseJSONWithCode(nil, 404, 40401, "ไม่พบรหัสผ่านหรือบัญชีไม่ถูกต้อง", false)
 		return
 	}
 	//GanNewToken
 	token, err := GanNewToken(user)
 	if err != nil {
-		this.ResponseJSONWithCode(nil, 500, 50000, "ไม่สามารถสร้างตัวแปรรับค่าได้")
+		this.ResponseJSONWithCode(nil, 500, 50000, "ไม่สามารถสร้างตัวแปรรับค่าได้", true)
 		return
 	}
 	result = map[string]interface{}{
@@ -53,7 +53,8 @@ func (this *User) Login() {
 		"user":  user.Username,
 	}
 
-	this.ResponseJSON(result, 200, v1.Success)
+	this.ResponseJSONWithCode(result, 200, 20000, v1.Success, false)
+
 	return
 }
 
@@ -61,7 +62,7 @@ func (this *User) LogOut() {
 	result := map[string]interface{}{}
 	user := this.GetUser()
 	if user == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized)
+		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized, false)
 		return
 	}
 
@@ -69,7 +70,7 @@ func (this *User) LogOut() {
 
 	err := models.DeleteUserToken(userToken.Id)
 	if err != nil {
-		this.ResponseJSONWithCode(result, 500, 500, "DeleteUserToken fail")
+		this.ResponseJSONWithCode(result, 500, 500, "DeleteUserToken fail", true)
 		return
 	}
 
@@ -82,7 +83,7 @@ func (this *User) ChangePassword() {
 	result := map[string]interface{}{}
 	user := this.GetUser()
 	if user == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized)
+		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized, false)
 		return
 	}
 	password := this.GetString("password")
@@ -91,26 +92,26 @@ func (this *User) ChangePassword() {
 	if trimString(password) == "" || trimString(newPassword) == "" {
 		logs.Debug("passwordTrim:", trimString(password))
 		logs.Debug("newPasswordTrim:", trimString(newPassword))
-		this.ResponseJSONWithCode(result, 400, 40001, "รูปแบบรหัสผ่านไม่ถูกต้อง")
+		this.ResponseJSONWithCode(result, 400, 40001, "รูปแบบรหัสผ่านไม่ถูกต้อง", false)
 		return
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		logs.Error("err", err)
-		this.ResponseJSONWithCode(nil, 401, 40002, "รหัสผ่านปัจจุบันไม่ถูกต้อง")
+		this.ResponseJSONWithCode(nil, 401, 40002, "รหัสผ่านปัจจุบันไม่ถูกต้อง", false)
 		return
 	}
 
 	err = this.ValidatePassword(newPassword)
 	if err != nil {
-		this.ResponseJSONWithCode(nil, 400, 40003, err.Error())
+		this.ResponseJSONWithCode(nil, 400, 40003, err.Error(), false)
 		return
 	}
 	enc, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		logs.Error("update reset password: err gen pass:", err)
-		this.ResponseJSONWithCode(nil, 500, 50001, v1.SomethingWentWrong)
+		this.ResponseJSONWithCode(nil, 500, 50001, v1.SomethingWentWrong, true)
 		return
 	}
 	user.Password = string(enc)
@@ -118,20 +119,20 @@ func (this *User) ChangePassword() {
 	err = models.UpdateUserById(nil, user)
 	if err != nil {
 		logs.Error("update reset password: err update u:", err)
-		this.ResponseJSONWithCode(nil, 500, 50002, v1.SomethingWentWrong)
+		this.ResponseJSONWithCode(nil, 500, 50002, v1.SomethingWentWrong, true)
 		return
 	}
 	// GanNewToken
 	token, err := GanNewToken(user)
 	if err != nil {
 		logs.Error("update reset password: err gen token:", err)
-		this.ResponseJSONWithCode(nil, 500, 50003, v1.SomethingWentWrong)
+		this.ResponseJSONWithCode(nil, 500, 50003, v1.SomethingWentWrong, true)
 		return
 	}
 	result = map[string]interface{}{
 		"token": token,
 	}
-	this.ResponseJSONWithCode(result, 200, 200, v1.Success)
+	this.ResponseJSONWithCode(result, 200, 200, v1.Success, false)
 	return
 }
 

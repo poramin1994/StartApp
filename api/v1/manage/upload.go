@@ -28,7 +28,7 @@ func (this *Upload) UploadImage() {
 	expiredDate := now.Add(7 * 24 * time.Hour)
 
 	if user == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized)
+		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized,false)
 		return
 	}
 
@@ -37,11 +37,11 @@ func (this *Upload) UploadImage() {
 
 	file, handler, err := this.GetFile("import")
 	if err != nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40000, "Error Retrieving the File")
+		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40000, "Error Retrieving the File",false)
 		return
 	}
 	if file == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40001, v1.BadRequest)
+		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40001, v1.BadRequest,false)
 		return
 	}
 
@@ -51,14 +51,14 @@ func (this *Upload) UploadImage() {
 	logs.Debug("MIME Header: %+v\n", handler.Header)
 
 	if err = this.CheckAndCreatesDirectory(tempFilePath, true); err != nil {
-		this.ResponseJSONWithCode(result, 404, 40401, err.Error())
+		this.ResponseJSONWithCode(result, 404, 40401, err.Error(),false)
 		return
 	}
 
 	// tempFile, err := ioutil.TempFile(tempFilePath, "upload-*.png")
 	tempFile, err := ioutil.TempFile(tempFilePath, "upload-*.jpeg")
 	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40402, err.Error())
+		this.ResponseJSONWithCode(result, 404, 40402, err.Error(),false)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (this *Upload) UploadImage() {
 
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40403, err.Error())
+		this.ResponseJSONWithCode(result, 404, 40403, err.Error(),false)
 		return
 	}
 	tempFile.Write(fileBytes)
@@ -76,7 +76,7 @@ func (this *Upload) UploadImage() {
 
 	mp := v1.ImagePath + "/Image"
 	if err = this.CheckAndCreatesDirectory(mp, true); err != nil {
-		this.ResponseJSONWithCode(result, 404, 40404, err.Error())
+		this.ResponseJSONWithCode(result, 404, 40404, err.Error(),false)
 		return
 	}
 	tempFileName := strings.Replace(tempFile.Name(), v1.ImagePath+"/TempFile/", "", 3)
@@ -84,7 +84,7 @@ func (this *Upload) UploadImage() {
 
 	err = CreateImage(tempFile, createPath)
 	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40405, err.Error())
+		this.ResponseJSONWithCode(result, 404, 40405, err.Error(),false)
 		return
 	}
 
@@ -110,7 +110,7 @@ func (this *Upload) UploadImage() {
 		"fileName": v1.PathCallData + "/Image/" + tempFileName,
 	}
 
-	this.ResponseJSONWithCode(result, 200, 200, "Successfully Uploaded")
+	this.ResponseJSONWithCode(result, 200, 200, "Successfully Uploaded",false)
 	return
 }
 

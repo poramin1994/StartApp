@@ -16,16 +16,23 @@ import (
 )
 
 func init() {
-	orm.RegisterDriver("mysql", orm.DRMySQL)
 	logs.EnableFuncCallDepth(true) // show file name & line number
 	logs.SetLogFuncCallDepth(3)
 	logs.Async(1e3)
+	orm.RegisterDriver("mysql", orm.DRMySQL)
 	mysqldriver, _ := beego.AppConfig.String("mysqldriver")
 	mysqluser, _ := beego.AppConfig.String("mysqluser")
 	mysqlpass, _ := beego.AppConfig.String("mysqlpass")
 	mysqlurls, _ := beego.AppConfig.String("mysqlurls")
 	mysqlport, _ := beego.AppConfig.String("mysqlport")
 	mysqldb, _ := beego.AppConfig.String("mysqldb")
+	logs.Info("================ Database Info ================")
+	logs.Info("Database mysqlDriver: " + mysqldriver)
+	logs.Info("Database mysqlUser: " + mysqluser)
+	logs.Info("Database mysqlPass: " + mysqlpass)
+	logs.Info("Database mysqlUrls: " + mysqlurls)
+	logs.Info("Database mysqlPort: " + mysqlport)
+	logs.Info("Database mysqlDb: " + mysqldb)
 
 	orm.RegisterDataBase("default", mysqldriver, mysqluser+":"+
 		mysqlpass)
@@ -56,7 +63,7 @@ func main() {
 	}
 
 	if beego.BConfig.RunMode == "dev" {
-		logs.Debug("dev mode")
+		logs.Info("================= Run [DEVELOPER] Mode =================")
 
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
@@ -84,6 +91,8 @@ func main() {
 			logs.Error(err)
 		}
 	} else if beego.BConfig.RunMode == "prd" {
+		logs.Info("================= Run [PRODUCTION] Mode =================")
+
 		//beego.SetLogger("file", `{"filename":"logs/stdout.log"}`)
 		logs.SetLogger(logs.AdapterMultiFile, `{"filename":"logs/app.log","separate":[ "error", "warning", "notice", "info", "debug"]}`)
 		logs.SetLevel(logs.LevelError)
@@ -104,6 +113,7 @@ func main() {
 			logs.SetLevel(logs.LevelDebug)
 		}
 	} else if beego.BConfig.RunMode == "stg" {
+		logs.Info("================= Run [STG] Mode =================")
 		// Database alias.
 		name := "default"
 

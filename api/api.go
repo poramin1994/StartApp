@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -120,81 +121,7 @@ type Schema struct {
 	Register string `json:"register"`
 }
 
-func NewGomoToken(channel, mobileId string) (res, tranId string) {
-	//token := jwt.New(jwt.SigningMethodHS512)
-	//Set some claims
-	//Create the Claims
-	t := time.Now()
-	y := strconv.Itoa(t.Year())
-	m := strconv.Itoa(int(t.Month()))
-	//m := t.Month()
-	d := strconv.Itoa(t.Day())
-	h := strconv.Itoa(t.Hour())
-	min := strconv.Itoa(t.Minute())
-	sec := strconv.Itoa(t.Second())
-	//NU 2021 11 20 11 49 40 54321
-	// NU 2018 08 20 16 02 01 54321
-	tranId = channel + y + m + d + h + min + sec + "54321"
-	now := (t).Unix()
-	expire := (t.Add(time.Minute * 1)).Unix()
-	//{
-	//	"mobileId": "611e2492d3f89f56750de208",
-	//	"action": "mission",
-	//	"schema": {
-	//		"home": "gomogame://home",
-	//		"toggle": "gomogame://toggle-speed",
-	//		"register": "gomogame://register-point"
-	//},
-	//	"iat": 1637138695,
-	//	"exp": 1637142295
-	//}
-
-	//{
-	//	"alg": "HS256",
-	//	"typ": "JWT"
-	//}
-	claims := &CustomClaim{
-		channel,
-		tranId,
-		mobileId,
-		//"mission",
-		//Schema {
-		//	Home:     "gomogame://home",
-		//	Toggle:   "gomogame://toggle-speed",
-		//	Register: "gomogame://register-point",
-		//},
-		//expire,
-		jwt.StandardClaims{
-			IssuedAt:  now,
-			ExpiresAt: expire,
-			//Issuer:    "gomo-mission-app",
-		},
-	}
-	//var buf bytes.Buffer
-	//jsonBytes , err := json.Marshal(claims)
-	//if err != nil {
-	//	logs.Error("err marshall json:",err)
-	//}
-	//err = json.Compact(&buf,jsonBytes)
-	//if err != nil {
-	//	logs.Debug("err:",err)
-	//}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	logs.Debug("expire:", expire)
-	logs.Debug("token:", token)
-	logs.Debug("token.Raw:", token.Raw)
-	//encodedKey := base64.RawURLEncoding.EncodeToString([]byte(GomoAccessKey))
-	//tokenString, err := token.SignedString([]byte(encodedKey))
-	tokenString, err := token.SignedString([]byte(GomoAccessKey))
-	logs.Debug("tokenString:", tokenString)
-	if err != nil {
-		logs.Error("Error cannot gen new token | ", err.Error())
-		return "", ""
-	}
-	return tokenString, tranId
-}
-
-func (api *API) ResponseJSONWithCode(results interface{}, statusCode int, code int64, msg string) {
+func (api *API) ResponseJSONWithCode(results interface{}, statusCode int, code int64, msg string, pushNoti bool) {
 	if results == nil {
 		results = struct{}{}
 	}
@@ -203,6 +130,46 @@ func (api *API) ResponseJSONWithCode(results interface{}, statusCode int, code i
 		Code:           code,
 		Message:        msg,
 		ResponseObject: results,
+	}
+	if pushNoti {
+		appname, _ := beego.AppConfig.String("appname")
+		apiPath := api.Ctx.Request.RequestURI
+		headerString := ""
+		reqBodyString := string(api.Ctx.Input.RequestBody)
+		paramString := fmt.Sprintf("%v", api.Ctx.Input.Params())
+		formString := fmt.Sprintf("%v", api.Ctx.Request.Form)
+
+		for name, value := range api.Ctx.Request.Header {
+			justString := strings.Join(value, " ")
+			headerString += name + ":" + justString + ","
+		}
+		for name, value := range api.Ctx.Input.Params() {
+			paramString += name + ":" + value + ","
+		}
+
+		errorCaseData := &models.ErrorCase{
+			StatusCode: statusCode,
+			Code:       code,
+			ApiPath:    apiPath,
+			ReqHeader:  headerString,
+			ReqForm:    formString,
+			ReqBody:    reqBodyString,
+			Params:     paramString,
+			Message:    msg,
+		}
+		errId, err := models.AddErrorCase(errorCaseData)
+		if err != nil {
+			logs.Error("err AddErrorCase :", err)
+		}
+		detailNoti := map[string]string{
+			"Appname":    appname,
+			"ApiPath":    apiPath,
+			"StatusCode": strconv.Itoa(statusCode),
+			"Code":       strconv.FormatInt(code, 10),
+			"Message":    msg,
+			"Info":       "ErrCaseID :" + strconv.FormatInt(errId, 10),
+		}
+		LineNotifyErrCase(detailNoti)
 	}
 
 	api.Data["json"] = response
@@ -502,4 +469,46 @@ func addFileToZip(w *zip.Writer, path string, baseInZip string, zipName string) 
 			}
 		}
 	}
+}
+
+func LineNotifyErrCase(data map[string]string) (res bool) {
+	// Create a new HTTP client
+	client := &http.Client{}
+
+	lineNotifyAPI, _ := beego.AppConfig.String("lineNotifyAPI")
+	accessToken, _ := beego.AppConfig.String("lineNotifyAccessToken")
+
+	// Create a new POST request
+	var messageNoti string
+	messageNoti += " \n"
+
+	for name, value := range data {
+		messageNoti += name + " : " + value + " \n"
+	}
+
+	messageNoti += "ฝากแก้ด้วยจ้าาาาาา~~~~"
+	req, err := http.NewRequest("POST", lineNotifyAPI, strings.NewReader("message="+messageNoti))
+	if err != nil {
+		fmt.Println("Err LineNotifyAPI: ", err)
+		return
+	}
+
+	// Set the "Authorization" and "Content-Type" headers
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Err LineNotifyAPI: ", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != 200 {
+		fmt.Println("Err LineNotifyAPI: ", err)
+		return
+	}
+	return true
 }

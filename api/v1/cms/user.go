@@ -140,7 +140,7 @@ func GanNewToken(user *models.User) (token string, err error) {
 	removeOldToken(user)
 
 gen:
-	token = randString(64)
+	token = models.GenerateAccessToken(user)
 	exist, _ := models.GetUserTokenByToken(token)
 	if exist != nil {
 		goto gen

@@ -38,6 +38,8 @@ var (
 )
 
 const (
+	// header
+	BearerPrefix              = "Bearer "
 	AccessKey                 = "VDeoa0934lkfaZ30ds"
 	Success                   = "Success"
 	BadRequest                = "Bad Request!"
@@ -76,7 +78,9 @@ func (api *API) GetAccessCredentials() string {
 }
 
 func (api *API) getHeaderAuthToken() string {
-	return api.Ctx.Input.Header(HeaderAuthToken)
+	token := api.Ctx.Input.Header(HeaderAuthToken)
+
+	return GetBearer(token)
 }
 
 func (api *API) GetHeaderMobileId() string {
@@ -133,6 +137,7 @@ func (api *API) ResponseJSONWithCode(results interface{}, statusCode int, code i
 	}
 	if pushNoti {
 		appname, _ := beego.AppConfig.String("appname")
+		runmode, _ := beego.AppConfig.String("runmode")
 		apiPath := api.Ctx.Request.RequestURI
 		headerString := ""
 		reqBodyString := string(api.Ctx.Input.RequestBody)
@@ -163,6 +168,7 @@ func (api *API) ResponseJSONWithCode(results interface{}, statusCode int, code i
 		}
 		detailNoti := map[string]string{
 			"Appname":    appname,
+			"Runmode":    runmode,
 			"ApiPath":    apiPath,
 			"StatusCode": strconv.Itoa(statusCode),
 			"Code":       strconv.FormatInt(code, 10),
@@ -206,12 +212,35 @@ func (api *API) ResponseJSON(results interface{}, code int, msg string) {
 	return
 }
 
-func (api *API) GetUser() *models.User {
+func (api *API) GetUser() (user *models.User) {
 	token := api.getHeaderAuthToken()
-	user := models.GetUserByToken(token)
+	user = models.GetUserByToken(token)
+	skey := models.MySigningKey
+
+	claims := jwt.MapClaims{}
+	rawData, _ := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(skey), nil //TODO : YOUR VERIFICATION KEY ?
+	})
+	logs.Debug("rawData: ", rawData)
+	logs.Debug("claims: ", claims)
+	username := claims["user"].(string)
+	userVeri, _ := models.GetUserByUsernameAndDelete(username, false)
+	if userVeri.Id != user.Id {
+		api.Data["user"] = nil
+	}
+
 	api.Data["user"] = user
-	return user
+	return
 }
+
+func GetBearer(authorization string) string {
+	n := len(BearerPrefix)
+	if len(authorization) < n || authorization[:n] != BearerPrefix {
+		return ""
+	}
+	return authorization[n:]
+}
+
 func (api *API) ValidatePassword(s string) error {
 	if len(s) < 8 || len(s) > 64 {
 		return errors.New("Password's length have to be between 8 - 64 characters.")

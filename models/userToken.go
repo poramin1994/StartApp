@@ -3,17 +3,25 @@ package models
 import (
 	"errors"
 	"fmt"
-	"math/rand"
+
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/beego/beego/logs"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/golang-jwt/jwt"
+
 	"github.com/beego/beego/v2/client/orm"
+)
+
+var (
+	MySigningKey, _ = beego.AppConfig.String("tokensercret")
 )
 
 type UserToken struct {
 	Id    int64  `orm:"auto"`
-	Token string `orm:"size(255)"`
+	Token string `orm:"size(1000)"`
 	User  *User  `orm:"null;rel(fk)"`
 
 	Created time.Time `orm:"auto_now_add;type(datetime)" json:"created"`
@@ -172,18 +180,25 @@ func GetUserByToken(token string) *User {
 	u, _ := GetUserById(ut.User.Id)
 	return u
 }
-func GenerateToken(length int) (token string) {
-	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-gen:
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	token = string(b)
-	exist := GetUserByToken(token)
-	if exist != nil {
-		goto gen
 
+func GenerateAccessToken(user *User) string {
+	secret := []byte(MySigningKey)
+
+	// Create a new JWT token
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	// Set claims for the token
+	claims := token.Claims.(jwt.MapClaims)
+	claims["user"] = user.Username
+	claims["iat"] = time.Now().Unix()
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	// Sign the token using the secret key
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		fmt.Println("Error signing token:", err)
+		return ""
 	}
-	return
+
+	logs.Info("tokenString: ", tokenString)
+	return tokenString
 }

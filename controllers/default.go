@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-//API for Client
+// API for Client
 type API struct {
 	beego.Controller
 }
@@ -103,7 +103,7 @@ func initAdminUser() {
 			//Generate user_token
 			user, _ := models.GetUserByUsername(username)
 			_, err = models.AddUserToken(&models.UserToken{
-				Token:   models.GenerateToken(32),
+				Token:   models.GenerateAccessToken(user),
 				User:    user,
 				Created: now,
 				Updated: now,

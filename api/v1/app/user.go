@@ -72,7 +72,7 @@ func (this *User) LogOut() {
 		return
 	}
 
-	this.ResponseJSON(result, 200, v1.Success)
+	this.ResponseJSONWithCode(result, 200, 20000, v1.Success, false)
 	return
 }
 
@@ -94,22 +94,29 @@ func (this *User) ChangePassword() {
 		return
 	}
 
+	if password != newPassword {
+		logs.Debug("passwordTrim:", password)
+		logs.Debug("newPasswordTrim:", newPassword)
+		this.ResponseJSONWithCode(result, 400, 40002, "รูปแบบรหัสผ่านไม่ถูกต้อง", false)
+		return
+	}
+
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		logs.Error("err", err)
-		this.ResponseJSONWithCode(nil, 401, 40002, "รหัสผ่านปัจจุบันไม่ถูกต้อง", false)
+		this.ResponseJSONWithCode(result, 401, 40100, "รหัสผ่านปัจจุบันตรงกับรหัสผ่านเดิม", false)
 		return
 	}
 
 	err = this.ValidatePassword(newPassword)
 	if err != nil {
-		this.ResponseJSONWithCode(nil, 400, 40003, err.Error(), false)
+		this.ResponseJSONWithCode(result, 400, 40003, err.Error(), false)
 		return
 	}
 	enc, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		logs.Error("update reset password: err gen pass:", err)
-		this.ResponseJSONWithCode(nil, 500, 50001, v1.SomethingWentWrong, true)
+		this.ResponseJSONWithCode(result, 500, 50001, v1.SomethingWentWrong, true)
 		return
 	}
 	user.Password = string(enc)
@@ -117,11 +124,11 @@ func (this *User) ChangePassword() {
 	err = models.UpdateUserById(nil, user)
 	if err != nil {
 		logs.Error("update reset password: err update u:", err)
-		this.ResponseJSONWithCode(nil, 500, 50002, v1.SomethingWentWrong, true)
+		this.ResponseJSONWithCode(result, 500, 50002, v1.SomethingWentWrong, true)
 		return
 	}
 
-	this.ResponseJSONWithCode(result, 200, 200, v1.Success, false)
+	this.ResponseJSONWithCode(result, 200, 20000, v1.Success, false)
 	return
 }
 

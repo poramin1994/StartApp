@@ -20,21 +20,20 @@ type Pdf struct {
 	v1.API
 }
 
-func (this *Pdf) GeneratePDFSpareList() {
+func (this *Pdf) GeneratePDFv1() {
 	now := time.Now()
 	expiredDate := now.Add(7 * 24 * time.Hour)
 	expiredDateTimeStamp := strconv.FormatInt(expiredDate.Unix(), 10)
-
 	result := map[string]interface{}{}
-	user := this.GetUser()
-	spareLists := make([]map[string]interface{}, 0)
+	spareLists := make([]map[string]interface{}, 0) //this 's mockup
 	var (
 		templ *template.Template
 		body  bytes.Buffer
 		err   error
 	)
+	user := this.GetUser()
 	if user == nil {
-		this.ResponseJSON(result, 401, v1.Unauthorized)
+		this.ResponseJSONWithCode(result, 401, 40100, v1.Unauthorized, false)
 		return
 	}
 
@@ -43,18 +42,18 @@ func (this *Pdf) GeneratePDFSpareList() {
 	}
 
 	if templ, err = template.ParseFiles("views/pdf-template/tmp1.html"); err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50000, err.Error(), true)
 		return
 	}
 
 	if err = templ.Execute(&body, data); err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50001, err.Error(), true)
 		return
 	}
 
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50002, err.Error(), true)
 		return
 	}
 
@@ -75,28 +74,28 @@ func (this *Pdf) GeneratePDFSpareList() {
 
 	err = pdfg.Create()
 	if err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50003, err.Error(), true)
 		return
 	}
 
 	//directory
-	filePath := v1.PathCallData + "/TempFile"
+	filePath := v1.ImagePath + "TempFile"
 	if err := this.CheckAndCreatesDirectory(filePath, true); err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50004, err.Error(), true)
 		return
 	}
 
 	timeString := now.Format("02-01-2006")
-	fileName := v1.ImagePath + "/TempFile/" + "approval" + timeString
+	fileName := filePath + "/" + timeString
 	err = os.WriteFile(fileName+".pdf", pdfg.Bytes(), os.ModePerm)
 	if err != nil {
-		this.ResponseJSON(err.Error(), 500, "error")
+		this.ResponseJSONWithCode(result, 500, 50005, err.Error(), true)
 		return
 	}
 
 	tmpfile := &models.TmpFileList{
 		User:        user,
-		Path:        "/TempFile/approval" + timeString,
+		Path:        fileName + ".pdf",
 		ExpiredDate: expiredDateTimeStamp,
 		Extension:   "",
 		Created:     now,
@@ -104,12 +103,14 @@ func (this *Pdf) GeneratePDFSpareList() {
 	}
 	if _, err = models.AddTmpFileList(tmpfile); err != nil {
 		logs.Error("Error UploadImage : add AddTmpFileList")
+		this.ResponseJSONWithCode(result, 500, 50006, err.Error(), true)
+		return
 	}
 
 	// export PDF
 
 	transcodeDstPath := v1.ImagePath + "/TempFile"
-	filename := "approval" + timeString
+	filename := timeString
 	output := transcodeDstPath + "/" + filename + ".pdf"
 	downloadName := filename + ".pdf"
 	logs.Debug("output :", output)
@@ -129,6 +130,5 @@ func (this *Pdf) GeneratePDFSpareList() {
 	w.Header().Set("Content-Transfer-Encoding", "binary")
 	http.ServeFile(w, r, output)
 
-	//this.ResponseJSON(result, 200, v1.Success)
 	return
 }

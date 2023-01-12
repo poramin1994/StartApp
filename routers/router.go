@@ -44,7 +44,7 @@ func init() {
 		),
 		beego.NSNamespace("/export",
 			beego.NSNamespace("/pdf",
-				beego.NSRouter("/spareList", &v1manage.Pdf{}, "get:GeneratePDFSpareList"),
+				beego.NSRouter("/generatePDFv1", &v1manage.Pdf{}, "get:GeneratePDFv1"),
 			),
 		),
 	)

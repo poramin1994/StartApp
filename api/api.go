@@ -216,20 +216,23 @@ func (api *API) GetUser() (user *models.User) {
 	token := api.getHeaderAuthToken()
 	user = models.GetUserByToken(token)
 	signingKey := models.MySigningKey
+	if token != "" {
+		claims := jwt.MapClaims{}
+		rawData, _ := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(signingKey), nil
+		})
+		logs.Debug("rawData: ", rawData)
+		logs.Debug("claims: ", claims)
+		username := claims["user"].(string)
+		userVeri, err := models.GetUserByUsernameAndDelete(username, false)
+		if userVeri.Id != user.Id || err != nil {
+			api.Data["user"] = nil
+		}
 
-	claims := jwt.MapClaims{}
-	rawData, _ := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(signingKey), nil
-	})
-	logs.Debug("rawData: ", rawData)
-	logs.Debug("claims: ", claims)
-	username := claims["user"].(string)
-	userVeri, err := models.GetUserByUsernameAndDelete(username, false)
-	if userVeri.Id != user.Id || err != nil {
-		api.Data["user"] = nil
+		api.Data["user"] = user
+		return
 	}
-
-	api.Data["user"] = user
+	api.Data["user"] = nil
 	return
 }
 

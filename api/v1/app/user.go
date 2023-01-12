@@ -50,7 +50,7 @@ func (this *User) Login() {
 	}
 	result = map[string]interface{}{
 		"token": token,
-		"user":  user.Username,
+		// "user":  user.Username,
 	}
 	this.ResponseJSONWithCode(result, 200, 20000, v1.Success, false)
 	return
@@ -81,7 +81,7 @@ func (this *User) ChangePassword() {
 	result := map[string]interface{}{}
 	user := this.GetUser()
 	if user == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized, false)
+		this.ResponseJSONWithCode(result, 401, 401, v1.Unauthorized, false)
 		return
 	}
 	password := this.GetString("password")
@@ -136,7 +136,7 @@ func GanNewToken(user *models.User) (token string, err error) {
 	removeOldToken(user)
 
 gen:
-	token = randString(64)
+	token = models.GenerateAccessToken(user)
 	exist, _ := models.GetUserTokenByToken(token)
 	if exist != nil {
 		goto gen

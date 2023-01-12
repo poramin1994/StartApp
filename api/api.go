@@ -215,17 +215,17 @@ func (api *API) ResponseJSON(results interface{}, code int, msg string) {
 func (api *API) GetUser() (user *models.User) {
 	token := api.getHeaderAuthToken()
 	user = models.GetUserByToken(token)
-	skey := models.MySigningKey
+	signingKey := models.MySigningKey
 
 	claims := jwt.MapClaims{}
 	rawData, _ := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(skey), nil //TODO : YOUR VERIFICATION KEY ?
+		return []byte(signingKey), nil
 	})
 	logs.Debug("rawData: ", rawData)
 	logs.Debug("claims: ", claims)
 	username := claims["user"].(string)
-	userVeri, _ := models.GetUserByUsernameAndDelete(username, false)
-	if userVeri.Id != user.Id {
+	userVeri, err := models.GetUserByUsernameAndDelete(username, false)
+	if userVeri.Id != user.Id || err != nil {
 		api.Data["user"] = nil
 	}
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ type Pdf struct {
 func (this *Pdf) GeneratePDFSpareList() {
 	now := time.Now()
 	expiredDate := now.Add(7 * 24 * time.Hour)
+	expiredDateTimeStamp := strconv.FormatInt(expiredDate.Unix(), 10)
 
 	result := map[string]interface{}{}
 	user := this.GetUser()
@@ -95,7 +97,7 @@ func (this *Pdf) GeneratePDFSpareList() {
 	tmpfile := &models.TmpFileList{
 		User:        user,
 		Path:        "/TempFile/approval" + timeString,
-		ExpiredDate: expiredDate,
+		ExpiredDate: expiredDateTimeStamp,
 		Extension:   "",
 		Created:     now,
 		Updated:     now,

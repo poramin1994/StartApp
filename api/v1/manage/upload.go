@@ -7,15 +7,13 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
-
-
 )
 
 type Upload struct {
@@ -23,94 +21,88 @@ type Upload struct {
 }
 
 func (this *Upload) UploadImage() {
-	user := this.GetUser()
+	result := map[string]interface{}{}
 	now := time.Now()
 	expiredDate := now.Add(7 * 24 * time.Hour)
+	expiredDateTimeStamp := strconv.FormatInt(expiredDate.Unix(), 10)
+	filePath := v1.ImagePath
 
+	user := this.GetUser()
 	if user == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 401, 401, v1.Unauthorized,false)
+		this.ResponseJSONWithCode(result, 401, 401, v1.Unauthorized, false)
 		return
 	}
 
-	tempFilePath := v1.ImagePath + "/TempFile"
-	result := map[string]interface{}{}
-
-	file, handler, err := this.GetFile("import")
+	file, header, err := this.GetFile("import")
 	if err != nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40000, "Error Retrieving the File",false)
+		this.ResponseJSONWithCode(result, 400, 40000, "Error Retrieving the File", false)
 		return
 	}
+
 	if file == nil {
-		this.ResponseJSONWithCode(map[string]interface{}{}, 400, 40001, v1.BadRequest,false)
+		this.ResponseJSONWithCode(result, 400, 40001, v1.BadRequest, false)
 		return
 	}
 
 	defer file.Close()
-	logs.Debug("Uploaded File: %+v\n", handler.Filename)
-	logs.Debug("File Size: %+v\n", handler.Size)
-	logs.Debug("MIME Header: %+v\n", handler.Header)
 
-	if err = this.CheckAndCreatesDirectory(tempFilePath, true); err != nil {
-		this.ResponseJSONWithCode(result, 404, 40401, err.Error(),false)
+	if err = this.CheckAndCreatesDirectory(filePath, true); err != nil {
+		this.ResponseJSONWithCode(result, 404, 40401, err.Error(), false)
 		return
 	}
-
-	// tempFile, err := ioutil.TempFile(tempFilePath, "upload-*.png")
-	tempFile, err := ioutil.TempFile(tempFilePath, "upload-*.jpeg")
-	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40402, err.Error(),false)
-		return
-	}
-
-	defer tempFile.Close()
-
-	fileBytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40403, err.Error(),false)
-		return
-	}
-	tempFile.Write(fileBytes)
-	logs.Debug("Successfully UploadedTmp")
 
 	//Create File for get
-
-	mp := v1.ImagePath + "/Image"
-	if err = this.CheckAndCreatesDirectory(mp, true); err != nil {
-		this.ResponseJSONWithCode(result, 404, 40404, err.Error(),false)
+	filePath = v1.ImagePath + "/TmpFileImage"
+	if err = this.CheckAndCreatesDirectory(filePath, true); err != nil {
+		this.ResponseJSONWithCode(result, 404, 40402, err.Error(), false)
 		return
 	}
-	tempFileName := strings.Replace(tempFile.Name(), v1.ImagePath+"/TempFile/", "", 3)
-	createPath := mp + "/" + tempFileName
-
-	err = CreateImage(tempFile, createPath)
+	filePath = filePath + "/" + header.Filename
+	out, err := os.Create(filePath)
 	if err != nil {
-		this.ResponseJSONWithCode(result, 404, 40405, err.Error(),false)
+		fmt.Println("Error creating new file:", err)
+		this.ResponseJSONWithCode(result, 500, 50000, err.Error(), true)
 		return
 	}
-
-	//Delete TmpFile
-	err = os.RemoveAll(tempFile.Name())
+	defer out.Close()
+	img, _, err := image.Decode(file)
 	if err != nil {
-		logs.Debug("Error delete dir image")
+		fmt.Println("Error decoding image:", err)
+		this.ResponseJSONWithCode(result, 500, 50001, err.Error(), true)
+
+		return
+	}
+	// Encode the image with a lower quality level
+	var opt jpeg.Options
+	opt.Quality = 80
+	jpeg.Encode(out, img, &opt)
+
+	// Copy the uploaded image to the new file
+	_, err = io.Copy(out, file)
+	if err != nil {
+		fmt.Println("Error copying image file:", err)
+		this.ResponseJSONWithCode(result, 500, 50002, err.Error(), true)
+		return
 	}
 
 	tmpfile := &models.TmpFileList{
 		User:        user,
-		Path:        "/Image/" + tempFileName,
-		ExpiredDate: expiredDate,
+		Path:        filePath,
+		ExpiredDate: expiredDateTimeStamp,
 		Extension:   "",
-		Created:     now,
-		Updated:     now,
 	}
-	if _, err = models.AddTmpFileList(tmpfile); err != nil {
+	tmpfileId, err := models.AddTmpFileList(tmpfile)
+	if err != nil {
 		logs.Error("Error UploadImage : add AddTmpFileList")
+		this.ResponseJSONWithCode(result, 500, 50003, err.Error(), true)
+		return
 	}
 
 	result = map[string]interface{}{
-		"fileName": v1.PathCallData + "/Image/" + tempFileName,
+		"tmpfileId": tmpfileId,
 	}
 
-	this.ResponseJSONWithCode(result, 200, 200, "Successfully Uploaded",false)
+	this.ResponseJSONWithCode(result, 200, 200, "Successfully Uploaded", false)
 	return
 }
 

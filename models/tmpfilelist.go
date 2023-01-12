@@ -11,12 +11,12 @@ import (
 )
 
 type TmpFileList struct {
-	Id          int64     `orm:"auto"`
-	User        *User     `orm:"rel(fk)"`
-	Path        string    `orm:"null;size(255)"`
-	Extension   string    `orm:"null;size(32)"`
-	ExpiredDate time.Time `orm:"auto_now_add"`
-	Delete      bool      `orm:"default(false)"`
+	Id          int64  `orm:"auto"`
+	User        *User  `orm:"rel(fk)"`
+	Path        string `orm:"null;size(255)"`
+	Extension   string `orm:"null;size(32)"`
+	ExpiredDate string `orm:"null;size(255)"`
+	Delete      bool   `orm:"default(false)"`
 
 	Created time.Time `orm:"auto_now_add;type(datetime)" json:"created"`
 	Updated time.Time `orm:"auto_now;type(datetime)" json:"updated"`

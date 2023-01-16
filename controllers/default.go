@@ -33,6 +33,7 @@ var (
 
 func Init() {
 	logs.Debug("init db")
+	initPrefix()
 	initAdminUser()
 }
 
@@ -80,6 +81,27 @@ func (c *API) Get() {
 	c.TplName = "index.tpl"
 }
 
+func initPrefix() {
+	prefixList := []string{"นาย", "นาง", "นางสาว"}
+	prefixListEn := []string{"Mr.", "Ms.", "Mrs."}
+	now := time.Now()
+
+	for i, data := range prefixList {
+		exist, _ := models.GetPrefixByPrefixTh(data)
+		if exist == nil {
+			_, err := models.AddPrefix(&models.Prefix{
+				PrefixTh: data,
+				PrefixEn: prefixListEn[i],
+				Created:  now,
+				Updated:  now,
+			})
+			if err != nil {
+				logs.Error("err init user :", data, "err", err)
+			}
+		}
+	}
+}
+
 func initAdminUser() {
 	usernameList := []string{"wisdomvastTester1@gmail.com", "wisdomvastTester2@gmail.com", "wisdomvastTester3@gmail.com", "wisdomvastDev@wisdomvast.com", "wisdomvastDev2@wisdomvast.com"}
 	now := time.Now()
@@ -89,13 +111,21 @@ func initAdminUser() {
 	for _, username := range usernameList {
 		exist, _ := models.GetUserByUsername(username)
 		if exist == nil {
-			_, err := models.AddUser(&models.User{
-				Username: username,
-				Password: pass,
-				Activate: true,
-				Delete:   false,
-				Created:  now,
-				Updated:  now,
+			profileObj := models.GetDefaultProfile()
+			profileId, err := models.AddProfile(&profileObj)
+			if err != nil {
+				logs.Error("err add profile", err)
+			}
+			profile, _ := models.GetProfileById(profileId)
+			_, err = models.AddUser(&models.User{
+				Username:  username,
+				Password:  pass,
+				Profile:   profile,
+				Activate:  true,
+				Delete:    false,
+				DeletedBy: 0,
+				Created:   now,
+				Updated:   now,
 			})
 			if err != nil {
 				logs.Error("err init user :", username, "err", err)

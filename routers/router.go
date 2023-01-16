@@ -36,6 +36,11 @@ func init() {
 			beego.NSRouter("/logout", &v1cms.User{}, "post:LogOut"),
 			beego.NSRouter("/changePassword", &v1cms.User{}, "post:ChangePassword"),
 		),
+		beego.NSNamespace("/systemUser",
+			// beego.NSRouter("/create", &v1cms.SystemUser{}, "post:CreateNewUser"),
+			beego.NSRouter("/logout", &v1cms.User{}, "post:LogOut"),
+			beego.NSRouter("/changePassword", &v1cms.User{}, "post:ChangePassword"),
+		),
 	)
 	managev1 := beego.NewNamespace("/v1/manage/api",
 		beego.NSBefore(FilterDebug),

@@ -10,11 +10,19 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 )
 
-type User struct {
-	Id        int64     `orm:"auto"`
-	Username  string    `orm:"null"`
-	Password  string    `orm:"null"`
-	Profile   *Profile  `orm:"rel(fk)"`
+type Profile struct {
+	Id           int64     `orm:"auto"`
+	Prefix       *Prefix   `orm:"rel(fk)"`
+	FnameTh      string    `orm:"null"`
+	LnameTh      string    `orm:"null"`
+	FnameEn      string    `orm:"null"`
+	LnameEn      string    `orm:"null"`
+	BirthDate    time.Time `orm:"null;type(datetime)"`
+	IdCardNumber string    `orm:"null;size(13)"`
+	Email        string    `orm:"null"`
+	Phone        string    `orm:"null;size(13)"`
+	Image        string    `orm:"null;size(255)"`
+
 	Activate  bool      `orm:"default(0)"`
 	Delete    bool      `orm:"default(0)"`
 	Deleted   time.Time `orm:"null"`
@@ -25,34 +33,34 @@ type User struct {
 }
 
 func init() {
-	orm.RegisterModel(new(User))
+	orm.RegisterModel(new(Profile))
 }
 
-// AddUser insert a new User into database and returns
+// AddProfile insert a new Profile into database and returns
 // last inserted Id on success.
-func AddUser(m *User) (id int64, err error) {
+func AddProfile(m *Profile) (id int64, err error) {
 	o := orm.NewOrm()
 	id, err = o.Insert(m)
 	return
 }
 
-// GetUserById retrieves User by Id. Returns error if
+// GetProfileById retrieves Profile by Id. Returns error if
 // Id doesn't exist
-func GetUserById(id int64) (v *User, err error) {
+func GetProfileById(id int64) (v *Profile, err error) {
 	o := orm.NewOrm()
-	v = &User{Id: id}
-	if err = o.QueryTable(new(User)).Filter("Id", id).RelatedSel().One(v); err == nil {
+	v = &Profile{Id: id}
+	if err = o.QueryTable(new(Profile)).Filter("Id", id).RelatedSel().One(v); err == nil {
 		return v, nil
 	}
 	return nil, err
 }
 
-// GetAllUser retrieves all User matches certain condition. Returns empty list if
+// GetAllProfile retrieves all Profile matches certain condition. Returns empty list if
 // no records exist
-func GetAllUser(query map[string]string, fields []string, sortby []string, order []string,
+func GetAllProfile(query map[string]string, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable(new(User))
+	qs := o.QueryTable(new(Profile))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
@@ -98,7 +106,7 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 		}
 	}
 
-	var l []User
+	var l []Profile
 	qs = qs.OrderBy(sortFields...).RelatedSel()
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {
@@ -121,13 +129,13 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 	return nil, err
 }
 
-// UpdateUser updates User by Id and returns error if
+// UpdateProfile updates Profile by Id and returns error if
 // the record to be updated doesn't exist
-func UpdateUserById(o orm.Ormer, m *User) (err error) {
+func UpdateProfileById(o orm.Ormer, m *Profile) (err error) {
 	if o == nil {
 		o = orm.NewOrm()
 	}
-	v := User{Id: m.Id}
+	v := Profile{Id: m.Id}
 	// ascertain id exists in the database
 	if err = o.Read(&v); err == nil {
 		var num int64
@@ -138,34 +146,42 @@ func UpdateUserById(o orm.Ormer, m *User) (err error) {
 	return
 }
 
-// DeleteUser deletes User by Id and returns error if
+// DeleteProfile deletes Profile by Id and returns error if
 // the record to be deleted doesn't exist
-func DeleteUser(id int64) (err error) {
+func DeleteProfile(id int64) (err error) {
 	o := orm.NewOrm()
-	v := User{Id: id}
+	v := Profile{Id: id}
 	// ascertain id exists in the database
 	if err = o.Read(&v); err == nil {
 		var num int64
-		if num, err = o.Delete(&User{Id: id}); err == nil {
+		if num, err = o.Delete(&Profile{Id: id}); err == nil {
 			fmt.Println("Number of records deleted in database:", num)
 		}
 	}
 	return
 }
-func GetUserByUsernameAndDelete(username string, del bool) (v *User, err error) {
-	o := orm.NewOrm()
-	v = &User{}
-	if err = o.QueryTable(new(User)).Filter("Username", username).Filter("Delete", del).RelatedSel().One(v); err == nil {
-		return v, nil
-	}
-	return nil, err
-}
 
-func GetUserByUsername(username string) (v *User, err error) {
-	o := orm.NewOrm()
-	v = &User{}
-	if err = o.QueryTable(new(User)).Filter("Username", username).RelatedSel().One(v); err == nil {
-		return v, nil
+func GetDefaultProfile() Profile {
+	now := time.Now()
+	pres, _ := GetPrefixlList()
+	var pre *Prefix
+	if pres != nil && len(pres) > 0 {
+		pre = pres[0]
 	}
-	return nil, err
+	return Profile{
+		Prefix:       pre,
+		FnameTh:      "ชื่อ",
+		LnameTh:      "นามสกุล",
+		FnameEn:      "FirstName",
+		LnameEn:      "LastName",
+		BirthDate:    now,
+		IdCardNumber: "",
+		Email:        "",
+		Phone:        "",
+		Image:        "",
+		Activate:     true,
+		Delete:       false,
+		Deleted:      now,
+		DeletedBy:    0,
+	}
 }
